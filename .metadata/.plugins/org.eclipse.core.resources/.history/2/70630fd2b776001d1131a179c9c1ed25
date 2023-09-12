@@ -1,0 +1,129 @@
+package entity;
+
+import java.util.Random;
+import main.GamePanel;
+
+public class NPC_Crab_1 extends Entity {
+
+	public NPC_Crab_1(GamePanel gp) {
+		super(gp);
+		name="Bright Crab";
+		type = 1;
+		direction = "right";
+		speed = 1;
+		
+		solidArea.x = 14;
+		solidArea.y = 25;
+		solidArea.width = 40;
+		solidArea.height = 10;
+		solidAreaDefaultX = solidArea.x;
+		solidAreaDefaultY = solidArea.y;
+		
+		dialogueSet = -1;
+		
+		charactersFrameCount = 75;
+		
+		getImage();
+		setDialogue();
+	}
+	public void getImage() {
+		up1 = setup("/npc/crab", gp.tileSize, gp.tileSize);
+		up2 = setup("/npc/crab", gp.tileSize, gp.tileSize);
+		down1 = setup("/npc/crab", gp.tileSize, gp.tileSize);
+		down2 = setup("/npc/crab", gp.tileSize, gp.tileSize);
+		left1 = setup("/npc/crab_left1", gp.tileSize, gp.tileSize);
+		left2 = setup("/npc/crab_left2", gp.tileSize, gp.tileSize);
+		left3 = setup("/npc/crab_left3", gp.tileSize, gp.tileSize);
+		right1 = setup("/npc/crab_right2", gp.tileSize, gp.tileSize);
+		right2 = setup("/npc/crab_right3", gp.tileSize, gp.tileSize);
+		right3 = setup("/npc/crab_right4", gp.tileSize, gp.tileSize);
+
+	} 
+	public void setDialogue() {
+		if(gp.player.inventoryContains("Golden Jig") == false) {
+			dialogues[0][0] = "Hello Tog, or should I say, Blackfish.\nHere, maybe this will help.\nAnother sentence. Another Sentence again.";
+			dialogues[0][1] = "Skinner needs your help, there's a\nGolden Jig somewhere here. We need\nto bring it over to him!";
+			dialogues[0][2] = "Good luck, Blackfish. I'll be around\nif you need more help.";
+			dialogues[0][3] = "Watch out for those other crabs and\njellies.";
+			dialogues[0][4] = "Anybody who is bright like me can help\nyou. Go talk to the Bright Jelly, he'll\ngive you something useful.";
+			dialogues[0][5] = "Press [Y] to see your inventory.";
+			
+			dialogues[1][0] = "A";
+			dialogues[1][1] = "B";
+			dialogues[1][2] = "C";
+			
+			dialogues[2][0] = "If you go find the first one for me,\nI'll show you a way out of here!";
+
+
+		}
+		else if(gp.player.inventoryContains("Golden Jig") == true){
+			dialogues[0][0] = "You got the Golden Jig!";
+		}
+
+
+	}
+	public void setAction() { 
+		actionLockCounter++;
+//		if(actionLockCounter == 1) {
+//			direction = "up";	
+//		}
+//		else if (actionLockCounter == 2) {
+//			direction = "right";
+//			actionLockCounter = 0;
+//		}
+		if(actionLockCounter == charactersFrameCount * 3) {
+			Random random = new Random();
+			int i = random.nextInt(100)+1; // number from 1-100
+		
+			
+			if(direction == "left") {
+				direction = "right";	
+			}
+			else {
+				direction = "left";	
+			}
+//			if(i > 50 && i <= 75 ) {
+//				direction = "left";	
+//			}
+//			if(i > 75 && i <= 100 ) {
+//				direction = "left";	
+//			}
+			actionLockCounter = 0;
+		}
+	}
+	public void speak() {
+//		facePlayer();
+		startDialogue(this, dialogueSet);
+		dialogueSet++;
+		if(dialogues[dialogueSet][0] == null) {
+			// option 1: npc resets to first set of dialogue
+			dialogueSet = 0;
+			// option 2:  npc repeats last set of dialogue
+//			dialogueSet--;
+		}
+		
+//		super.speak();
+	}
+	public void spriteNumAndMovementHandler() {
+		spriteCounter++;
+		if(spriteCounter <= 35) {
+			spriteNum = 1;	
+		}
+		if(spriteCounter > 35 && spriteCounter <= 50 ) {
+			spriteNum = 2;
+			if(collisionOn == false ) {
+				switch (direction) {
+				case "left": worldX -= speed; break;
+				case "right": worldX += speed; break;
+				}
+			}
+		}
+		if(spriteCounter > 50 && spriteCounter <= charactersFrameCount ) {
+			spriteNum = 3;	
+		}
+
+		if (spriteCounter >= charactersFrameCount) {
+			spriteCounter = 0;
+		}
+	}
+}

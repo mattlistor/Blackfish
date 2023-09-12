@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Copy element &apos;map01.txt&apos; to &apos;map01.txt&apos;&#x0A;- Original project: &apos;PixelGame&apos;&#x0A;- Destination element: &apos;map01.txt&apos;&#x0A;- Original element: &apos;map01.txt&apos;" description="Copy file" element1="res/maps/map01.txt" files="1" flags="589830" folders="0" id="org.eclipse.jdt.ui.copy" policy="org.eclipse.jdt.ui.copyResources" stamp="1669666006942" target="/PixelGame/res/maps/map01.txt" units="0" version="1.0"/>
+</session>

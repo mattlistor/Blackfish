@@ -1,0 +1,456 @@
+package main;
+
+import java.awt.AlphaComposite;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+
+import javax.imageio.ImageIO;
+import javax.swing.JPanel;
+
+import entity.Entity;
+import entity.Player;
+import environment.EnvironmentManager;
+import object.OBJ_Golden_Jig;
+import object.OBJ_Sparkle;
+import tile.TileManager;
+
+public class GamePanel extends JPanel implements Runnable{
+	
+	// SCREEN SETTINGS
+	final int originalTileSize = 16; // 16x16 tile
+	final int scale = 4;
+	
+	public final int tileSize = originalTileSize * scale; // 64x64 tile
+	public final int maxScreenCol = 16;
+	public final int maxScreenRow = 12; // 4x3 ratio
+	public final int screenWidth = tileSize * maxScreenCol; // 1024 pixels
+	public final int screenHeight = tileSize * maxScreenRow; // 768 pixels
+	
+	// WORLD SETTINGS
+	public final int maxWorldCol = 80;
+	public final int maxWorldRow = 50;
+	public final int maxWorldWidth = tileSize * maxWorldCol;
+	public final int maxWorldHeight = tileSize * maxWorldRow;
+	public final int maxMap = 3;
+	public int currentMap = 0;
+	
+	// FOR FULLSCREEN
+	int screenWidth2 = screenWidth;
+	int screenHeight2 = screenHeight;
+	BufferedImage tempScreen;
+	Graphics2D g2;
+
+
+
+	
+	public int offsetX = 0;
+	public int screenLeftBorder = (int) (0.45 * screenWidth);
+	public int screenRightBorder = (int) (0.55 * screenWidth);
+	public int worldLeftBorder = (int) (0.2 * maxWorldCol * tileSize);
+	public int worldRightBorder = (int) (0.8 * maxWorldCol * tileSize);
+	public int upBorder = (int) (0.2 * screenHeight);
+	public int downBorder = (int) (0.8 * screenHeight);
+	public int maxTilesOffset = maxWorldCol - maxScreenCol;
+	public int maxOffsetX = maxTilesOffset * tileSize;
+	
+	// NPC SPARKLE
+	public Entity sparkle = new OBJ_Sparkle(this);
+	
+	// FPS
+	int FPS = 60;
+
+	// SYSTEM
+	TileManager  tileM = new TileManager(this);
+	public KeyHandler keyH = new KeyHandler(this);
+	public Sound music = new Sound();	
+	public Sound se = new Sound();	
+	public CollisionChecker cChecker = new CollisionChecker(this);
+	public AssetSetter aSetter = new AssetSetter(this);
+	public UI ui = new UI(this);
+	public EventHandler eHandler = new EventHandler(this);
+	Thread gameThread;
+	public EnvironmentManager eManager = new EnvironmentManager(this);
+	public CutSceneManager csManager = new CutSceneManager(this);
+
+
+	// ENTITY AND OBJECT
+	public Player player = new Player(this, keyH);
+	public Entity obj[][] = new Entity[maxMap][100];
+	public Entity npc[][] = new Entity[maxMap][10];
+	public Entity placeholder[][] = new Entity[maxMap][1];
+	public Entity monster[][] = new Entity[maxMap][100];
+	public Entity trapWalls[][] = new Entity[maxMap][10];
+
+	public ArrayList<Entity> projectileList = new ArrayList<>();
+	ArrayList<Entity> entityList = new ArrayList<>();
+	public Entity currentSpeaker = null;
+	public int currentDialogueIndex = 0;
+	public Entity golden_jig = new OBJ_Golden_Jig(this);
+	public boolean openTrap;
+	public int trapMonsterDeathCounter = 0;
+
+
+	// GAME STATE
+	public int gameState;
+	public final int titleState = 0;
+	public final int playState = 1;
+	public final int pauseState = 2;
+	public final int dialogueState = 3;
+	public final int characterState = 4;
+	public final int gameOverState = 5;
+	public final int levelTransitionState = 6;
+	public final int titleTransitionState = 7;
+	public final int cutSceneState = 8;
+
+
+	public boolean drawHitBoxes = false;
+	public boolean firstFrame = true;
+	public boolean darkness = false ;
+	
+	// BACKGROUND 
+	BufferedImage bg_rocks1 = setup("/tiles/bg_rocks1", tileSize*maxWorldCol/2, tileSize*maxWorldRow/2);
+	BufferedImage bg_rocks2 = setup("/tiles/bg_rocks2", tileSize*maxWorldCol/2, tileSize*maxWorldRow/2);
+	BufferedImage bg_rocks3 = setup("/tiles/bg_rocks3", tileSize*maxWorldCol/2, tileSize*maxWorldRow/2);
+	BufferedImage bg_rocks4 = setup("/tiles/bg_rocks4", tileSize*maxWorldCol/2, tileSize*maxWorldRow/2);
+	
+	// GOLDEN JIGS
+	public Entity jig_1 = new OBJ_Golden_Jig(this);
+	public Entity jig_2 = new OBJ_Golden_Jig(this);
+	public boolean pauseMusicGoldenJig = false;
+	public int pauseMusicGoldenJigCounter;
+
+	public GamePanel() {
+		this.setPreferredSize(new Dimension(screenWidth, screenHeight));
+		this.setBackground(new Color(0, 24, 13));
+		this.setDoubleBuffered(true);
+		this.addKeyListener(keyH);
+		this.setFocusable(true);
+	}
+	
+	public void setupGame() {
+		aSetter.setObject();
+		aSetter.setNPC();
+		aSetter.setMonster();
+		eManager.setUp();
+		gameState = titleState;
+		
+		tempScreen = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_ARGB);
+		g2 = (Graphics2D)tempScreen.getGraphics();
+	}
+	
+	public void startGameThread() {
+		gameThread = new Thread(this);
+		gameThread.start();
+	}
+
+	@Override
+	public void run() {
+		
+		double drawInterval = 1000000000/FPS; // 0.01666 seconds
+		double delta = 0;
+		long lastTime = System.nanoTime();
+		long currentTime;
+		
+		while(gameThread != null) {
+			
+			currentTime = System.nanoTime();
+			
+			delta += (currentTime - lastTime) / drawInterval;
+			lastTime = currentTime;
+					
+			if(delta >=1) {
+				update();
+				repaint();
+				delta--;
+			}
+		}
+	}
+	
+	public void update() {
+		if(firstFrame == true) {
+			playMusic(0);
+			firstFrame = false;
+		}
+		
+		if(gameState == playState) {
+			// PLAYER
+			player.update();
+			player.checkIfCloseToNPC();
+
+			// OBJECT
+			for(int i = 0; i < npc[currentMap].length; i++) {
+				Entity npcObj = npc[currentMap][i];						
+
+				if(npcObj != null) {
+					if(npcObj.alive == true && npcObj.dying == false) {
+						npc[currentMap][i].update(); 
+					}
+					// remove rock
+					else if(npcObj.alive == false) {
+						npc[currentMap][i] = null;
+					}
+				}
+			}
+			// NPC
+			for(int i = 0; i < obj[currentMap].length; i++) {
+				if(obj[currentMap][i] != null) {
+					obj[currentMap][i].update(); 
+				}
+			}
+			// MONSTER
+			for(int i = 0; i < monster[currentMap].length; i++) {
+				if(monster[currentMap][i] != null) {
+					if(monster[currentMap][i].alive == true && monster[currentMap][i].dying == false) {
+						monster[currentMap][i].update(); 
+					}
+					if(monster[currentMap][i].alive == false) {
+						Entity temp = monster[currentMap][i];
+						// REMOVE MONSTER
+						monster[currentMap][i] = null;
+						// OPEN TRAP
+						if(temp.trapMonster == true) { 
+							openTrap = checkToOpenTrap(); 
+							if(openTrap == true) {
+								stopMusic();
+								playMusic(0);
+								for(int j = 0; j < obj[1].length; j++) {
+
+									// REMOVE TRAP WALL
+									if(obj[currentMap][j] != null) {
+										if(obj[currentMap][j].name == "Trap Wall") {
+											obj[currentMap][j] = null;
+										}	
+									}
+								}
+							}
+							
+						}
+	
+					}
+				}
+			}
+			// PROJECTILE
+			for(int i = 0; i < projectileList.size(); i++) {
+				if(projectileList.get(i) != null) {
+					if(projectileList.get(i).alive == true) {
+						projectileList.get(i).update(); 
+					}
+					if(projectileList.get(i).alive == false) {
+						projectileList.remove(i); 
+					}
+				}
+			}
+		}
+		
+		if(gameState == pauseState) {
+//			stopMusic();
+			// nothing for now
+		}	
+		if(gameState == cutSceneState) {
+			for(int i = 0; i < npc[currentMap].length; i++) {
+				if(npc[currentMap][i] != null) {
+					npc[currentMap][i].update(); 
+				}
+			}
+			for(int i = 0; i < placeholder[currentMap].length; i++) {
+				if(placeholder[currentMap][i] != null) {
+					placeholder[currentMap][i].update(); 
+				}
+			}
+		}
+		
+		if(pauseMusicGoldenJig == true) {
+			pauseMusicGoldenJigCounter++;
+			if(pauseMusicGoldenJigCounter > 180) {
+				playMusic(0);
+				pauseMusicGoldenJig = false;
+				
+			}
+		}
+
+	}
+	
+	public void drawToTempScreen() {
+		
+		
+	}
+	
+	public void paintComponent(Graphics g) {
+	
+		super.paintComponent(g);
+		
+		Graphics2D g2 = (Graphics2D)g;
+		
+		// TITLE SCREEN
+		if(gameState == titleState) {
+			ui.draw(g2);
+		}
+		else {
+			// BACKGROUND
+//			drawBackground(g2);
+
+			// TILE
+			tileM.draw(g2, offsetX);
+			
+			// ADD ENTITIES TO THE LIST
+			player.g2 = g2;
+			
+			for(int i = 0; i < obj[1].length; i++) {
+				if(obj[currentMap][i] != null) {
+					entityList.add(obj[currentMap][i]);
+				}
+			}
+			for(int i = 0; i < monster[1].length; i++) {
+				if(monster[currentMap][i] != null) {
+					entityList.add(monster[currentMap][i]);
+				}
+			}
+			for(int i = 0; i < placeholder[1].length; i++) {
+				if(placeholder[currentMap][i] != null) {
+					entityList.add(placeholder[currentMap][i]);
+				}
+			}
+
+			
+			// SORT
+			Collections.sort(entityList, new Comparator<Entity>() {
+				@Override
+				public int compare(Entity e1, Entity e2) {
+					int result = Integer.compare(e1.worldY,  e2.worldY);
+					return result;
+				}
+			});
+			
+			// DRAW ENTITIES
+			for(int i = 0; i < entityList.size(); i++) {
+				entityList.get(i).draw(g2);
+			}
+			// EMPTY ENTITY LIST
+			entityList.clear();
+			
+			//INITIAL DARKNESS
+			if(darkness == true) {
+				g2.fillRect(0, 0, screenWidth, screenHeight);
+			}
+			
+			//PLAYER
+			player.draw(g2);
+			
+			// DRAW ONLY ROCK NPC's
+			for(int i = 0; i < npc[1].length; i++) {
+				if(npc[currentMap][i] != null && npc[currentMap][i].name == "Rock") {
+						npc[currentMap][i].draw(g2);
+				}
+			}
+			
+			// ENVIRONMENT
+			if(drawHitBoxes == false) {
+				eManager.draw(g2);
+			}
+			
+			//NPC's
+			for(int i = 0; i < npc[1].length; i++) {
+				if(npc[currentMap][i] != null && npc[currentMap][i].name != "Rock") {
+					npc[currentMap][i].draw(g2);
+				}
+			}
+			
+			//PROJECTILES
+			for(int i = 0; i < projectileList.size(); i++) {
+				if(projectileList.get(i) != null) {
+					projectileList.get(i).draw(g2);
+				}
+			}
+			
+			//CUTSCENE  
+			csManager.draw(g2);
+			
+			// UI
+			ui.draw(g2);
+			g2.dispose();
+		}
+	}
+	private void drawBackground(Graphics2D g2) {
+		if(currentMap == 0) {
+			g2.drawImage(bg_rocks4, (int)(-(screenWidth*0)-(player.worldX - player.screenX)*0.1), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks3, (int)(-(screenWidth*0)-(player.worldX - player.screenX)*0.2), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks2, (int)(-(screenWidth*0)-(player.worldX - player.screenX)*0.3), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks1, (int)(-(screenWidth*0)-(player.worldX - player.screenX)*0.4), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+
+			
+			g2.drawImage(bg_rocks4, (int)(-(screenWidth)-(player.worldX - player.screenX)*0.1), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks3, (int)(-(screenWidth)-(player.worldX - player.screenX)*0.2), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks2, (int)(-(screenWidth)-(player.worldX - player.screenX)*0.3), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks1, (int)(-(screenWidth)-(player.worldX - player.screenX)*0.4), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+
+			g2.drawImage(bg_rocks4, (int)((screenWidth)-(player.worldX - player.screenX)*0.1), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks3, (int)((screenWidth)-(player.worldX - player.screenX)*0.2), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks2, (int)((screenWidth)-(player.worldX - player.screenX)*0.3), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);
+			g2.drawImage(bg_rocks1, (int)((screenWidth)-(player.worldX - player.screenX)*0.4), (int)(-(screenHeight/2)-(player.worldY - player.screenY)*0.2), screenWidth,screenHeight+(screenHeight/2), null);	
+		}
+	}
+
+	public void playMusic(int i) {
+		music.setFile(i);
+		music.play();
+		music.loop();
+	}
+	public void stopMusic() {
+		music.stop();
+	}
+	public void playSE(int i) {
+		se.setFile(i);
+		se.play();
+	}
+	public boolean checkToOpenTrap() {
+		trapMonsterDeathCounter++;
+		if(trapMonsterDeathCounter >= 4) {
+			trapMonsterDeathCounter = 0;
+			return true;
+		}
+		return false;
+		
+	}
+	public BufferedImage setup(String imagePath, int width, int height) {
+		UtilityTool uTool = new UtilityTool();
+		BufferedImage image = null;
+		try {
+			image = ImageIO.read(getClass().getResourceAsStream(imagePath + ".png"));
+			image = uTool.scaleImage(image, width, height);
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+		return image;
+	}
+
+	public void resetGame() {
+		player.resetCounter();
+		player.playerLives = 3;
+		player.currentLife = player.maxLife;
+		eHandler.canTouchTriggerEvent = true;
+		player.inventory.clear();
+		player.worldX = tileSize * 17;	
+		player.worldY = tileSize * 2;
+		gameState = playState;
+		aSetter.monsterIndex = 0;
+		aSetter.objectIndex = 0;
+		entityList.clear();
+		aSetter.setObject();
+		aSetter.setNPC();
+		aSetter.setMonster();
+		player.hpBarOnCounter = 301;
+		player.currentWeapon = null;
+		stopMusic();
+		playMusic(0);
+	}
+
+	
+}

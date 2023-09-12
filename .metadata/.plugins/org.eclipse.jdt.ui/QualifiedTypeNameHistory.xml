@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+    <fullyQualifiedTypeName name="java.awt.Color"/>
+    <fullyQualifiedTypeName name="object.OBJ_Weapon_Normal"/>
+    <fullyQualifiedTypeName name="object.OBJ_Shield"/>
+    <fullyQualifiedTypeName name="java.util.Arrays"/>
+    <fullyQualifiedTypeName name="java.util.List"/>
+    <fullyQualifiedTypeName name="java.util.ArrayList"/>
+    <fullyQualifiedTypeName name="object.OBJ_Key"/>
+    <fullyQualifiedTypeName name="monster.MON_Jellyfish_1"/>
+    <fullyQualifiedTypeName name="monster.MON_Jellyfish_2"/>
+    <fullyQualifiedTypeName name="monster.MON_Fluke"/>
+    <fullyQualifiedTypeName name="monster.MON_Starfish_1"/>
+    <fullyQualifiedTypeName name="main.GamePanel"/>
+    <fullyQualifiedTypeName name="entity.NPC_Jellyfish_1"/>
+    <fullyQualifiedTypeName name="object.OBJ_Shield_2"/>
+    <fullyQualifiedTypeName name="entity.Projectile"/>
+    <fullyQualifiedTypeName name="object.OBJ_Golden_Jig"/>
+    <fullyQualifiedTypeName name="object.OBJ_Water_Ball"/>
+    <fullyQualifiedTypeName name="monster.MON_Crab_2"/>
+    <fullyQualifiedTypeName name="object.OBJ_Gulp_Juice"/>
+    <fullyQualifiedTypeName name="object.OBJ_Seaweed"/>
+    <fullyQualifiedTypeName name="object.OBJ_Weapon_Laser"/>
+    <fullyQualifiedTypeName name="object.OBJ_Trap_Wall"/>
+    <fullyQualifiedTypeName name="object.OBJ_Starfish_Wall"/>
+    <fullyQualifiedTypeName name="entity.NPC_Rock_1"/>
+    <fullyQualifiedTypeName name="object.OBJ_Starfish_Button"/>
+    <fullyQualifiedTypeName name="entity.Entity"/>
+    <fullyQualifiedTypeName name="monster.MON_Starfish_Wall"/>
+    <fullyQualifiedTypeName name="java.awt.datatransfer.SystemFlavorMap"/>
+    <fullyQualifiedTypeName name="object.OBJ_Title_Text"/>
+    <fullyQualifiedTypeName name="object.OBJ_Sparkle"/>
+    <fullyQualifiedTypeName name="java.awt.image.BufferedImage"/>
+    <fullyQualifiedTypeName name="object.OBJ_Bubble_Shoot_Placeholder"/>
+</qualifiedTypeNameHistroy>
